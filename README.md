@@ -1,4 +1,4 @@
-# cs231n-assignment
+# cs231n-Spring2019-assignment
 CS231n是斯坦福大学开设的关于计算机视觉与深度学习方面的一门经典课程，个人感觉非常棒，无论从学习的系统性和完整性，作业的引导性方面都是国内课程没有的。
 全称是：Convolutional Neural Networks for Visual Recognition
 现已更新到 2019 Spring，但是视频还是2017 Spring的，会和lecture上的有点不一样，因为这方面更新换代快，每年新开课估计又有东西更新了。
