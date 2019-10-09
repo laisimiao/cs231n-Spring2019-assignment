@@ -219,7 +219,7 @@ def batchnorm_forward(x, gamma, beta, bn_param):
 
         x_hat = (x - running_mean) / (np.sqrt(running_var + eps))
         out = gamma * x_hat + beta
-        # cache = (gamma, x, eps, x_hat)
+        # no cache for test-time.As it's no BP process.
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         #######################################################################
@@ -616,18 +616,16 @@ def conv_backward_naive(dout, cache):
     dx = np.zeros(x.shape)
     db = np.zeros(b.shape)
 
-    stride = conv_param['stride']
-    pad = conv_param['pad']
-    for data_point in range(N):
-        xx = np.pad(x[data_point,:,:,:], pad_width=((0,0),(pad,pad),(pad,pad)), mode='constant')
+    for n in range(N):
+        xx = np.pad(x[n,:,:,:], pad_width=((0,0),(pad,pad),(pad,pad)), mode='constant')
         dx_x = np.zeros(xx.shape)
         for filt in range(F):
             for hh in range(H_out):
                 for ww in range(W_out):
-                    dw[filt,:,:,:] += dout[data_point,filt,hh,ww] * xx[:,stride*hh:stride*hh+HH,stride*ww:stride*ww+WW]
-                    db[filt] += dout[data_point,filt,hh,ww]
-                    dx_x[:,stride*hh:stride*hh+HH,stride*ww:stride*ww+WW] += dout[data_point,filt,hh,ww] * w[filt,:,:,:]
-        dx[data_point,:,:,:] = dx_x[:,pad:-pad,pad:-pad]
+                    dw[filt,:,:,:] += dout[n,filt,hh,ww] * xx[:,stride*hh:stride*hh+HH,stride*ww:stride*ww+WW]
+                    db[filt] += dout[n,filt,hh,ww]
+                    dx_x[:,stride*hh:stride*hh+HH,stride*ww:stride*ww+WW] += dout[n,filt,hh,ww] * w[filt,:,:,:]
+        dx[n,:,:,:] = dx_x[:,pad:-pad,pad:-pad]
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
     #                             END OF YOUR CODE                            #
@@ -708,16 +706,14 @@ def max_pool_backward_naive(dout, cache):
     _, _, H_out, W_out = dout.shape
     dx = np.zeros(x.shape)
 
-
-
-    for data_point in range(N):
+    for n in range(N):
         for channel in range(C):
             for hh in range(H_out):
                 for ww in range(W_out):
-                    temp = x[data_point,channel,stride*hh:stride*hh+pool_height,stride*ww:stride*ww+pool_width]
+                    temp = x[n,channel,stride*hh:stride*hh+pool_height,stride*ww:stride*ww+pool_width]
                     index = np.where(temp==np.max(temp))
-                    dx[data_point,channel,stride*hh:stride*hh+pool_height,stride*ww:stride*ww+pool_width][index] = dout[data_point,channel,hh,ww] 
-
+                    dx[n,channel,stride*hh:stride*hh+pool_height,stride*ww:stride*ww+pool_width][index] = \
+                        dout[n,channel,hh,ww]
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -760,7 +756,6 @@ def spatial_batchnorm_forward(x, gamma, beta, bn_param):
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
     # Note: reshape must be correspond to transpose order
-    # Before, I wrote ... .reshape(N * W * H, C), it didn't work well
     N, C, H, W = x.shape
     x = x.transpose(0, 2, 3, 1).reshape(N * H * W, C)
     out, cache = batchnorm_forward(x, gamma, beta, bn_param)
@@ -802,10 +797,6 @@ def spatial_batchnorm_backward(dout, cache):
     dout = dout.transpose(0, 2, 3, 1).reshape(N * H * W, C)
     dx, dgamma, dbeta = batchnorm_backward_alt(dout, cache)
     dx = dx.reshape(N, H, W, C).transpose(0, 3, 1, 2)
-
-    # dout = dout.transpose(0, 2, 3, 1).reshape(N * W * H, C)
-    # dx, dgamma, dbeta = batchnorm_backward_alt(dout, cache)
-    # dx = dx.reshape(N, W, H, C).transpose(0, 3, 2, 1)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -850,15 +841,15 @@ def spatial_groupnorm_forward(x, gamma, beta, G, gn_param):
     out = np.zeros(x.shape)
     cache = []
 
-    feature_per_group = int(C / G)
+    f_p_g = int(C / G) # feature_per_group
     for group in range(G):
-        x_piece = x[:,group*feature_per_group:group*feature_per_group + feature_per_group]
-        gamma_piece = np.squeeze(gamma)[group*feature_per_group:group*feature_per_group + feature_per_group]
-        beta_piece = np.squeeze(beta)[group*feature_per_group:group*feature_per_group + feature_per_group]
+        x_piece = x[:,group*f_p_g:group*f_p_g + f_p_g]
+        gamma_piece = np.squeeze(gamma)[group*f_p_g:group*f_p_g + f_p_g]
+        beta_piece = np.squeeze(beta)[group*f_p_g:group*f_p_g + f_p_g]
 
         out_piece, cache_piece = layernorm_forward(x_piece, gamma_piece, beta_piece, gn_param)
 
-        out[:,group*feature_per_group:group*feature_per_group + feature_per_group] = out_piece
+        out[:,group*f_p_g:group*f_p_g + f_p_g] = out_piece
         cache.append(cache_piece)
 
     out = out.reshape(N, H, W, C).transpose(0, 3, 1, 2)
@@ -892,7 +883,7 @@ def spatial_groupnorm_backward(dout, cache):
 
     N, C, H, W = dout.shape
     G = len(cache)
-    feature_per_group = int(C / G)
+    f_p_g = int(C / G) # feature_per_group
     dout = dout.transpose(0, 2, 3, 1).reshape(N * H * W, C)
 
     dx = np.zeros(dout.shape)
@@ -900,20 +891,21 @@ def spatial_groupnorm_backward(dout, cache):
     dbeta = np.zeros(C)
 
 
-    for i in range(G):
-        dout_piece = dout[:,i*feature_per_group:i*feature_per_group+feature_per_group]
+    for g in range(G):
+        dout_piece = dout[:,g*f_p_g:g*f_p_g+f_p_g]
         
-        dx_p, dgamma_p, dbeta_p = layernorm_backward(dout_piece, cache[i])
+        dx_p, dgamma_p, dbeta_p = layernorm_backward(dout_piece, cache[g])
 
-        dx[:,i*feature_per_group:i*feature_per_group+feature_per_group] = dx_p
-        dgamma[i*feature_per_group:i*feature_per_group+feature_per_group] = dgamma_p
-        dbeta[i*feature_per_group:i*feature_per_group+feature_per_group] = dbeta_p
+        dx[:,g*f_p_g:g*f_p_g+f_p_g] = dx_p
+        dgamma[g*f_p_g:g*f_p_g+f_p_g] = dgamma_p
+        dbeta[g*f_p_g:g*f_p_g+f_p_g] = dbeta_p
 
     dx = dx.reshape(N, H, W, C).transpose(0, 3, 1, 2)
     dgamma = np.expand_dims(dgamma, axis=0)
     dgamma = np.expand_dims(np.expand_dims(dgamma, axis=-1), axis=-1)
     dbeta = np.expand_dims(dbeta, axis=0)
     dbeta = np.expand_dims(np.expand_dims(dbeta, axis=-1), axis=-1)
+
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
     #                             END OF YOUR CODE                            #

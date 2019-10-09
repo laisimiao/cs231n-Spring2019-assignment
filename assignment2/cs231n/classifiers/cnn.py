@@ -54,8 +54,8 @@ class ThreeLayerConvNet(object):
         # the start of the loss() function to see how that happens.                #                           
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-        inputdim = input_dim
-        self.params['W1'] = weight_scale * np.random.randn(num_filters, inputdim[0], filter_size, filter_size)
+
+        self.params['W1'] = weight_scale * np.random.randn(num_filters, input_dim[0], filter_size, filter_size)
         self.params['b1'] = np.zeros(num_filters)
         N = int(num_filters * (input_dim[1] / 2) * (input_dim[2] / 2))
         self.params['W2'] = weight_scale * np.random.randn(N, hidden_dim)
@@ -71,11 +71,6 @@ class ThreeLayerConvNet(object):
         for k, v in self.params.items():
             self.params[k] = v.astype(dtype)
 
-    """
-    def get_shape(self):
-        W1_shape = self.params['W1'].shape
-        return W1_shape
-    """
 
     def loss(self, X, y=None):
         """
@@ -133,22 +128,12 @@ class ThreeLayerConvNet(object):
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
         # compute loss
-        # to keep numerical calculate stablly,minus maximum
-        N = X.shape[0]
-        scores = scores - np.max(scores,axis=1).reshape(-1,1)
-        exp_scores = np.exp(scores)
-        probs = exp_scores / np.sum(exp_scores, axis=1, keepdims=True)
-        correct_logprobs = -np.log(probs[range(N),y])
-        data_loss = np.sum(correct_logprobs) / N
+        data_loss, dscores = softmax_loss(scores, y)
         # strange by code test in .ipynb, here no need to multiply by 0.5
         reg_loss = 0.5 * self.reg * (np.sum(W1 * W1) + np.sum(W2 * W2) + np.sum(W3 * W3))
         loss = data_loss + reg_loss
 
-
         # compute grads
-        dscores = probs.copy()
-        dscores[range(N), y] -= 1
-        dscores /= N
         dx3, grads['W3'], grads['b3'] = affine_backward(dscores, module3_cache)
         dx2, grads['W2'], grads['b2'] = affine_relu_backward(dx3, module2_cache)
         dx1, grads['W1'], grads['b1'] = conv_relu_pool_backward(dx2, module1_cache)

@@ -58,7 +58,8 @@ def sgd_momentum(w, dw, config=None):
     if config is None: config = {}
     config.setdefault('learning_rate', 1e-2)
     config.setdefault('momentum', 0.9)
-    v = config.get('velocity', np.zeros_like(w)) # 如果config字典中有键'velocity',则返回v，否则返回0 like w
+    v = config.get('velocity', np.zeros_like(w))
+    # 如果config字典中有键'velocity',则返回v，否则返回0 like w
 
     next_w = None
     ###########################################################################
@@ -159,7 +160,6 @@ def adam(w, dw, config=None):
     config['v'] = config['beta2'] * config['v'] + (1 - config['beta2']) * (dw**2)
     vt = config['v'] / (1 - config['beta2'] ** config['t'])
     next_w = w - config['learning_rate'] * mt / (np.sqrt(vt) + config['epsilon'])
-    
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
