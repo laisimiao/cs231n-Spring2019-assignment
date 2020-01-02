@@ -21,3 +21,5 @@ CS231n是斯坦福大学开设的关于计算机视觉与深度学习方面的�
 
 [博客](https://blog.csdn.net/laizi_laizi/article/details/100830239)更新完喽，有不对之处欢迎指出，一起交流讨论！
 有好的想法或者代码哪里有问题，都可以在下方留言哦，欢迎批评指正~
+
+附件1：[assignment#1/#2中需要的cifar10数据集下载地址](https://github.com/BaoWentz/cifar10_for_CS231n)
